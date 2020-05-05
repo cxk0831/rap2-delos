@@ -617,6 +617,12 @@ export default class MigrateService {
     return tree
   }
 
+  /**
+   * 从swagger导入数据
+   * @param repositoryId
+   * @param curUserId
+   * @param swagger
+   */
   public static async importRepoFromSwaggerProjectData(
     repositoryId: number,
     curUserId: number,
@@ -675,7 +681,9 @@ export default class MigrateService {
     let pathTag: SwaggerTag[] = []
 
     // 获取所有的TAG: 处理ROOT TAG中没有的情况
+    // 手动遍历path中的tag进行绑定
     for (const action in paths) {
+      // 获取swagger中method后面的value
       const apiObj = paths[action][Object.keys(paths[action])[0]]
       const index = pathTag.findIndex((it: SwaggerTag) => {
         return apiObj.tags.length > 0 && it.name === apiObj.tags[0]
@@ -686,6 +694,7 @@ export default class MigrateService {
           description: tags.find(item => item.name === apiObj.tags[0]).description || '',
         })
     }
+
     tags = pathTag
 
     if (checkSwaggerResult.length > 0) return false
@@ -717,6 +726,7 @@ export default class MigrateService {
         return item.name === tag.name
       }) // 判断是否存在模块
       let mod = null
+      // 如果数据库中无此模块，插入
       if (findIndex < 0) {
         mod = await Module.create({
           name: tag.name,
@@ -756,6 +766,7 @@ export default class MigrateService {
             ...repositoryModules.toJSON(),
           }
 
+          // TODO 当前阅读位置
           const request = await this.swaggerToModelRequest(
             swagger,
             apiObj.parameters || {},
@@ -1111,6 +1122,8 @@ export default class MigrateService {
             collaboratorIds: [],
           })
         }
+
+        // 上面逻辑更新了repositories表中的description
 
         if (result[0] || result.id) {
           const bol = await this.importRepoFromSwaggerProjectData(
