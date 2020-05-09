@@ -1,2 +1,2 @@
 ALTER TABLE `Properties`
-  MODIFY COLUMN `type` enum('String','Number','Boolean','Object','Array','Function','RegExp','Null') NOT NULL;
+  MODIFY COLUMN `type` VARCHAR(256) NOT NULL;
