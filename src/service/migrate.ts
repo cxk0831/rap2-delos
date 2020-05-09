@@ -518,11 +518,11 @@ export default class MigrateService {
     } else if (method === 'post' || method === 'POST') {
       let list = [] // 外层处理参数数据结果
       const bodyObj = parameters.find(item => item.in === 'body') // body unique
-
       if (!bodyObj) list = [...parameters]
       else {
+        console.log('url输出', apiInfo.url)
         const { schema } = bodyObj
-        if (!schema.$ref) {
+        if (!schema?.$ref) {
           // 没有按照接口规范返回数据结构,默认都是对象
           list = parameters.filter(item => item.in === 'query' || item.in === 'header')
         } else {
@@ -552,7 +552,6 @@ export default class MigrateService {
       }
       parse(list, 'root', 'root', 0, result, definitions, 'request', apiInfo)
     }
-
     const tree = arrayToTree(JSON.parse(JSON.stringify(result)))
     return tree
   }
@@ -765,10 +764,9 @@ export default class MigrateService {
           repository = {
             ...repositoryModules.toJSON(),
           }
-
           const request = await this.swaggerToModelRequest(
             swagger,
-            apiObj.parameters || {},
+            apiObj.parameters || [],
             method,
             { url, summary },
           )
@@ -776,6 +774,7 @@ export default class MigrateService {
             url,
             summary,
           })
+
           // 处理完每个接口请求参数后，如果-遇到第一个存在接口不符合规范就全部返回
           if (checkSwaggerResult.length > 0) break
 
@@ -822,7 +821,6 @@ export default class MigrateService {
               },
               { where: { id: findApi.id } },
             )
-
             // 获取已经存在的接口的属性信息，并处理深度和parentName
             let A_ExistsPropertiesOld = JSON.parse(JSON.stringify(findApi.properties))
             A_ExistsPropertiesOld = JSON.parse(
@@ -1039,7 +1037,6 @@ export default class MigrateService {
               )
               updateProperties(BFilterByDepth, depth, 'request')
             }
-
             for (let depth = 0; depth <= maxDepth_Response; depth++) {
               const BFilterByDepth = B_SwaggerProperties_Response.filter(
                 item => item.depth === depth,
