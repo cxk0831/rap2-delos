@@ -33,7 +33,7 @@ export default class Property extends Model<Property> {
 
   @AllowNull(false)
   @Column({
-    type: DataType.ENUM(TYPES.STRING, TYPES.NUMBER, TYPES.BOOLEAN, TYPES.OBJECT, TYPES.ARRAY, TYPES.FUNCTION, TYPES.REGEXP, TYPES.Null),
+    type: DataType.STRING(10),
     comment: 'property type',
   })
   /** Data Type */
