@@ -154,6 +154,7 @@ const parse = (parameters, parent, parentName, depth, result, definitions, scope
 
       const ref = definitions[refName]
       if (ref && ref.properties) {
+        result.find(item => item.id === `${parent}-${key}`).description = ref.description
         const properties = ref.properties
         const list = []
 
@@ -742,7 +743,6 @@ export default class MigrateService {
             url,
             summary,
           })
-
           // 处理完每个接口请求参数后，如果-遇到第一个存在接口不符合规范就全部返回
           if (checkSwaggerResult.length > 0) break
 
