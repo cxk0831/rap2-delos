@@ -497,61 +497,30 @@ export default class MigrateService {
   public static async swaggerToModelRequest(
     swagger: SwaggerData,
     parameters: Array<any>,
-    method: string,
     apiInfo: any,
   ): Promise<any> {
     let { definitions } = swagger
     const result = []
     definitions = JSON.parse(JSON.stringify(definitions)) // 防止接口之间数据处理相互影响
-
-    if (method === 'get' || method === 'GET') {
-      parse(
-        parameters.filter(item => item.in !== 'body') || [],
-        'root',
-        'root',
-        0,
-        result,
-        definitions,
-        'request',
-        apiInfo,
-      )
-    } else if (method === 'post' || method === 'POST') {
-      let list = [] // 外层处理参数数据结果
-      const bodyObj = parameters.find(item => item.in === 'body') // body unique
-      if (!bodyObj) list = [...parameters]
-      else {
-        console.log('url输出', apiInfo.url)
-        const { schema } = bodyObj
-        if (!schema?.$ref) {
-          // 没有按照接口规范返回数据结构,默认都是对象
-          list = parameters.filter(item => item.in === 'query' || item.in === 'header')
-        } else {
-          const refName = schema.$ref.split('#/definitions/')[1]
-          const ref = definitions[refName]
-
-          if (!ref)
-            list = [...parameters.filter(item => item.in === 'query' || item.in === 'header')]
-          else {
-            const properties = ref.properties || {}
-            const bodyParameters = []
-
-            for (const key in properties) {
-              bodyParameters.push({
-                name: key,
-                ...properties[key],
-                in: 'body',
-                required: (ref.required || []).indexOf(key) >= 0,
-              })
-            }
-            list = [
-              ...bodyParameters,
-              ...parameters.filter(item => item.in === 'query' || item.in === 'header'),
-            ]
-          }
+    const list = parameters.reduce((pre, cur) => {
+      const refName = cur?.schema?.$ref?.split('#/definitions/')[1]
+      const properties = definitions[refName]?.properties
+      if (properties) {
+        for (const key in properties) {
+          pre.push({
+            name: key,
+            ...properties[key],
+            in: 'body',
+            required: (definitions[refName].required || []).indexOf(key) >= 0,
+          })
         }
       }
-      parse(list, 'root', 'root', 0, result, definitions, 'request', apiInfo)
-    }
+      else {
+        pre.push(cur)
+      }
+      return pre
+    }, [])
+    parse(list, 'root', 'root', 0, result, definitions, 'request', apiInfo)
     const tree = arrayToTree(JSON.parse(JSON.stringify(result)))
     return tree
   }
@@ -767,7 +736,6 @@ export default class MigrateService {
           const request = await this.swaggerToModelRequest(
             swagger,
             apiObj.parameters || [],
-            method,
             { url, summary },
           )
           const response = await this.swaggerToModelRespnse(swagger, apiObj.responses || {}, {
