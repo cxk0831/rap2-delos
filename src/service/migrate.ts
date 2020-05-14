@@ -161,7 +161,7 @@ const parse = (parameters, parent, parentName, depth, result, definitions, scope
       case !!param?.items:
         refName = getRefFromRefName(param.items?.$ref)
         ref = definitions[refName]
-        ref && (param.description = ref.description)
+        ref && param.description?.indexOf('$$') !== -1 && (param.description = ref.description)
         delete param.items
         addNode(param, {type: 'array', id})
         throughRef(ref, key, param, refName)
@@ -715,11 +715,11 @@ export default class MigrateService {
               return (
                 item.id === mod.id &&
                 item.interfaces.findIndex(it => {
+                  // TODO 此处有重复添加的bug
                   return (it.url || '').indexOf(url) >= 0 && ((it.method || '').indexOf(method.toUpperCase()) >= 0)
                 }) >= 0
               ) // 已经存在接口
             })
-
             if (index < 0) {
               // 创建接口
               const itf = await Interface.create({
