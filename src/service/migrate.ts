@@ -11,6 +11,11 @@ import * as md5 from 'md5'
 const isMd5 = require('is-md5')
 import * as _ from 'lodash'
 
+const RESPONSE_RESULT = {
+  name: 'RESPONSE_RESULT',
+  type: 'object'
+}
+
 const SWAGGER_VERSION = {
   1: '2.0',
 }
@@ -145,6 +150,9 @@ const parse = (parameters, parent, parentName, depth, result, definitions, scope
     }
   }
   const getRefFromRefName = (refString) => refString?.split('#/definitions/')[1]
+  const updateParamDescriptionFromRef = (param, ref, refName) => {
+    ref && (param.description = ref.description || refName)
+  }
   for (let key = 0, len = parameters.length; key < len; key++) {
     const param = parameters[key]
     const id = `${parent}-${key}`
@@ -153,7 +161,7 @@ const parse = (parameters, parent, parentName, depth, result, definitions, scope
       case !!param?.$ref:
         refName = getRefFromRefName(param.$ref)
         ref = definitions[refName]
-        ref && (param.description = ref.description)
+        updateParamDescriptionFromRef(param, ref, refName)
         delete param.$ref
         addNode(param, {type: 'object', id})
         throughRef(ref, key, param, refName)
@@ -161,7 +169,7 @@ const parse = (parameters, parent, parentName, depth, result, definitions, scope
       case !!param?.items:
         refName = getRefFromRefName(param.items?.$ref)
         ref = definitions[refName]
-        ref && param.description?.indexOf('$$') !== -1 && (param.description = ref.description)
+        updateParamDescriptionFromRef(param, ref, refName)
         delete param.items
         addNode(param, {type: 'array', id})
         throughRef(ref, key, param, refName)
@@ -169,7 +177,7 @@ const parse = (parameters, parent, parentName, depth, result, definitions, scope
       case !!param?.schema && !!param.schema.$ref:
         refName = getRefFromRefName(param.schema.$ref)
         ref = definitions[refName]
-        ref && (param.description = ref.description)
+        updateParamDescriptionFromRef(param, ref, refName)
         delete param.schema
         addNode(param, {type: 'object', id})
         throughRef(ref, key, param, refName)
@@ -182,7 +190,7 @@ const parse = (parameters, parent, parentName, depth, result, definitions, scope
       case !!param?.schema && param.schema.type === 'array' && !!param.schema.items?.$ref:
         refName = getRefFromRefName(param.schema.items.$ref)
         ref = definitions[refName]
-        ref && (param.description = ref.description || refName)
+        updateParamDescriptionFromRef(param, ref, refName)
         delete param.schema
         addNode(param, {type: 'array', id})
         throughRef(ref, key, param, refName)
@@ -491,55 +499,16 @@ export default class MigrateService {
   ): Promise<any> {
     let { definitions = {} } = swagger
     definitions = JSON.parse(JSON.stringify(definitions)) // 防止接口之间数据处理相互影响
-
+    const responseResult: {[paramKey: string]: any} = {
+      name: RESPONSE_RESULT.name,
+      type: RESPONSE_RESULT.type,
+    }
     const successObj = response['200']
-    if (!successObj) return []
-
-    const { schema } = successObj
-    if (!schema?.$ref && schema?.type !== 'array') {
-      // 没有按照接口规范返回数据结构,默认都是对象
-      return []
-    }
-    const parameters = []
-    if (schema?.type === 'array') {
-      parameters.push({
-        name: 'ArrayData',
-        type: 'array',
-        description: '这是工具生成属性$$',
-        items: schema.items
-      })
-    }
-    else {
-      const refName = schema.$ref.split('#/definitions/')[1]
-      const ref = definitions[refName]
-      if (ref && ref.properties) {
-        const properties = ref.properties
-        for (const key in properties) {
-          // 公共返回参数描述信息设置
-          let description = ''
-          if (!properties[key].description && key === 'errorCode') {
-            description = '错误码'
-          }
-          if (!properties[key].description && key === 'errorMessage') {
-            description = '错误描述'
-          }
-          if (!properties[key].description && key === 'success') {
-            description = '请求业务结果'
-          }
-
-          parameters.push({
-            name: key,
-            ...properties[key],
-            in: 'body',
-            required: key === 'success' ? true : (ref.required || []).indexOf(key) >= 0,
-            default: key === 'success' ? true : properties[key].default || false,
-            description: properties[key].description || description,
-          })
-        }
-      }
+    if (successObj.schema) {
+      responseResult.schema = successObj.schema
     }
     const result = []
-    parse(parameters, 'root', 'root', 0, result, definitions, 'response', apiInfo)
+    parse([responseResult], 'root', 'root', 0, result, definitions, 'response', apiInfo)
     const tree = arrayToTree(JSON.parse(JSON.stringify(result)))
     return tree
   }
@@ -604,7 +573,7 @@ export default class MigrateService {
       }
     }
 
-    let { tags = [], paths = {}, host = '' } = swagger
+    let { tags = [], paths = {} } = swagger
     let pathTag: SwaggerTag[] = []
 
     // 获取所有的TAG: 处理ROOT TAG中没有的情况
@@ -726,7 +695,7 @@ export default class MigrateService {
                 moduleId: mod.id,
                 name: `${apiObj.summary}`,
                 description: apiObj.description,
-                url: `https//${host}${url.replace('-test', '')}`,
+                url: `${url.replace('-test', '')}`,
                 priority: iCounter++,
                 creatorId: curUserId,
                 repositoryId: repositoryId,
@@ -750,7 +719,7 @@ export default class MigrateService {
                   moduleId: mod.id,
                   name: `${apiObj.summary}`,
                   description: apiObj.description,
-                  url: `https//${host}${url.replace('-test', '')}`,
+                  url: `${url.replace('-test', '')}`,
                   repositoryId: repositoryId,
                   method: method.toUpperCase(),
                 },
