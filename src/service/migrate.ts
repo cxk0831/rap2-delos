@@ -739,9 +739,10 @@ export default class MigrateService {
               for (const p of response.children || []) {
                 await processParam(p, SCOPES.RESPONSE, itf.id, mod.id)
               }
-            } else {
+            }
+            else {
               const findApi = repository.modules[index].interfaces.find(
-                item => item.url.indexOf(url) >= 0,
+                item => item.url.indexOf(url) >= 0 && item.method.indexOf(method.toUpperCase()) >= 0,
               )
               // 更新接口
               await Interface.update(
