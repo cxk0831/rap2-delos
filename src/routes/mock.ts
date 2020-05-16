@@ -105,8 +105,22 @@ router.get('/app/plugin/:repositories', async (ctx) => {
 // X DONE 2.2 支持 GET POST PUT DELETE 请求
 // DONE 2.2 忽略请求地址中的前缀斜杠
 // DONE 2.3 支持所有类型的请求，这样从浏览器中发送跨越请求时不需要修改 method
-router.all('/app/mock/:repositoryId(\\d+)/:url(.+)', async (ctx) => {
-  await MockService.mock(ctx, { forceVerify: true })
+router.all('/app/mock/:repositoryId(\\d+)/:url(.+)', async (ctx, next) => {
+  // const url = ctx.request.url.replace(/\/app\/mock\/.*?\//, '/')
+  // const proxy = require('koa-proxy')
+  // await proxy({
+  //   url: 'http://192.168.2.118:18400' + url,
+  // })(ctx, next)
+  console.log('这是测试内容', ctx.request.url)
+  await next()
+})
+
+router.all('/app/mock/:repositoryId(\\d+)/:url(.+)', async (ctx, next) => {
+  const url = ctx.request.url.replace(/\/app\/mock\/.*?\//, '/')
+  const proxy = require('koa-proxy')
+  await proxy({
+    url: 'http://192.168.2.118:18400' + url,
+  })(ctx, next)
 })
 
 router.all('/app/mock-noverify/:repositoryId(\\d+)/:url(.+)', async ctx => {

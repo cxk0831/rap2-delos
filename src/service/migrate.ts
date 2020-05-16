@@ -13,7 +13,7 @@ import * as _ from 'lodash'
 
 const RESPONSE_RESULT = {
   name: 'RESPONSE_RESULT',
-  type: 'object'
+  type: 'object',
 }
 
 const SWAGGER_VERSION = {
@@ -136,13 +136,13 @@ const parse = (parameters, parent, parentName, depth, result, definitions, scope
         if (property?.$ref && getRefFromRefName(property.$ref) === refName) {
           newProperty.$ref = null
           newProperty.type = 'object'
-          newProperty.description = `【递归父级属性】${properties[key].description || ''}`
+          newProperty.description = `【递归父级属性】${properties[propertyKey]?.description || ''}`
         }
         if (property?.items?.$ref && getRefFromRefName(property.items.$ref) === refName) {
           newProperty.type = 'array'
           newProperty.items = null
           newProperty.$ref = null
-          newProperty.description = `【递归父级属性】${properties[key].description || ''}`
+          newProperty.description = `【递归父级属性】${properties[propertyKey]?.description || ''}`
         }
         list.push(newProperty)
       }
