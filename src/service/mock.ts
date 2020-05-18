@@ -24,6 +24,7 @@ export class MockService {
     }
 
     let urlWithoutPrefixSlash = /(\/)?(.*)/.exec(url)[2]
+    urlWithoutPrefixSlash = url.replace(/v1\//, '')
 
     let repository = await Repository.findByPk(repositoryId)
     let collaborators: Repository[] = (await repository.$get('collaborators')) as Repository[]
@@ -221,6 +222,10 @@ export class MockService {
     let data = Tree.ArrayToTreeToTemplateToData(properties, requestData)
     if (data.__root__) {
       data = data.__root__
+    }
+    // 如果存在RESPONSE_RESULT 删除
+    if (data.RESPONSE_RESULT) {
+      data = data.RESPONSE_RESULT
     }
     ctx.type = 'json'
     ctx.status = itf.status

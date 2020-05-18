@@ -3,6 +3,7 @@ import { Repository, Interface, Property } from '../models'
 import { QueryInclude } from '../models'
 import Tree from './utils/tree'
 import { MockService } from '../service/mock'
+import { ProxyService } from '../service/proxy'
 
 const attributes: any = { exclude: [] }
 const pt = require('node-print').pt
@@ -106,21 +107,16 @@ router.get('/app/plugin/:repositories', async (ctx) => {
 // DONE 2.2 忽略请求地址中的前缀斜杠
 // DONE 2.3 支持所有类型的请求，这样从浏览器中发送跨越请求时不需要修改 method
 router.all('/app/mock/:repositoryId(\\d+)/:url(.+)', async (ctx, next) => {
-  // const url = ctx.request.url.replace(/\/app\/mock\/.*?\//, '/')
-  // const proxy = require('koa-proxy')
-  // await proxy({
-  //   url: 'http://192.168.2.118:18400' + url,
-  // })(ctx, next)
-  console.log('这是测试内容', ctx.request.url)
-  await next()
-})
-
-router.all('/app/mock/:repositoryId(\\d+)/:url(.+)', async (ctx, next) => {
-  const url = ctx.request.url.replace(/\/app\/mock\/.*?\//, '/')
-  const proxy = require('koa-proxy')
-  await proxy({
-    url: 'http://192.168.2.118:18400' + url,
-  })(ctx, next)
+  // TODO url模糊查询后续需要修改，mysql字符串模糊查询需表中的url字段是查询字段的子字符串，不能用like
+  // 外部统一处理url
+  try {
+    await ProxyService.checkUrl(ctx)
+    await ProxyService.proxyUrl(ctx, next)
+  }
+  catch (e) {
+    // 如果校验不通过，走mock
+    await MockService.mock(ctx, { forceVerify: false })
+  }
 })
 
 router.all('/app/mock-noverify/:repositoryId(\\d+)/:url(.+)', async ctx => {
