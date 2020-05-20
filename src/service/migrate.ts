@@ -195,6 +195,14 @@ const parse = (parameters, parent, parentName, depth, result, definitions, scope
         addNode(param, {type: 'array', id})
         throughRef(ref, key, param, refName)
         break
+      case !!param?.schema && !!param.schema.properties:
+        refName = ''
+        ref = param.schema
+        updateParamDescriptionFromRef(param, ref, refName)
+        delete param.schema
+        addNode(param, {type: param.type || 'object', id})
+        throughRef(ref, key, param, refName)
+        break
       default:
         // 基础对象直接加入到result数组中
         addNode(param, {id})
